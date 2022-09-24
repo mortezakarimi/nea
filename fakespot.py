@@ -10,16 +10,6 @@ from selenium.webdriver.support.wait import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support import expected_conditions as EC
 
-
-class fakespot(threading.Thread):
-    def __init__(self, product):
-        threading.Thread.__init__(self)
-        self.product = product
-
-    def run(self):
-        openFakespotTab(self.product)
-
-
 products = [
     'https://www.amazon.co.uk/SmithPackaging-Double-Cardboard-Moving-Handles/dp/B083NMTVS5/ref=sr_1_5?crid=1WRZDGDIAJ88R&keywords=box&qid=1661972994&sprefix=box%2Caps%2C124&sr=8-5',
     'https://www.amazon.co.uk/Levington-Tomorite-Liquid-Tomato-Concentrate/dp/B09RK3HPH5',
@@ -79,17 +69,14 @@ def openFakespotTab(product):
 
         # WebDriverWait(driver, 120).until(EC.invisibility_of_element_located((By.CSS_SELECTOR, ".popup-box")))
         # driver.get_screenshot_as_file("screenshot" + str(product[-1]) + ".png")
-        score = extract_up_to_date_score(driver, True)
-        print(score)
-    else:
-        score = extract_up_to_date_score(driver, False)
-        print(score)
+    score = extract_up_to_date_score(driver, outdated)
+    return score
 
-
-for prod in products:
-    # fakespotProd = fakespot(prod)
-    # fakespotProd.start()
-    openFakespotTab(prod)
+#
+# for prod in products:
+#     # fakespotProd = fakespot(prod)
+#     # fakespotProd.start()
+#     openFakespotTab(prod)
 # driver.close()
 
 

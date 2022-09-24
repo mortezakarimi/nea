@@ -1,11 +1,13 @@
 import json
-import multiprocessing
 import queue
 import threading
 import time
 import urllib.parse
 
+from progress.bar import Bar
+
 import common
+import fakespot_api
 
 exitFlag = 0
 
@@ -46,9 +48,9 @@ class ThreadHandler(threading.Thread):
         self.q = q
 
     def run(self):
-        print("Starting Process-" + self.thread_id)
+        # print("Starting Process-" + self.thread_id)
         process_data(self.q)
-        print("Exiting  Process-" + self.thread_id)
+        # print("Exiting  Process-" + self.thread_id)
 
 
 def process_data(q):
@@ -65,13 +67,17 @@ def process_data(q):
                 products.append(prod)
                 price = price_span.text
                 prod["price"] = float(price[1:])
+                prod["fake_spot"] = fakespot_api.FakeSpot.get_product_info(prod["link"])
+            bar.next()
             queueLock.release()
         else:
             queueLock.release()
             time.sleep(1)
 
 
+print("Loading search page...")
 page = common.load_url(amazon_URL)
+print("Calculate page data...")
 soup = common.make_soup(page)
 
 search_results = soup.find_all("div", {"data-asin": True})
@@ -82,8 +88,11 @@ queueLock = threading.Lock()
 workQueue = queue.Queue(total_search_results)
 threads = []
 
+print("Processing product information")
+
+bar = Bar('Processing', max=total_search_results)
 # Create new threads
-for threadID in range(multiprocessing.cpu_count()):
+for threadID in range(total_search_results):
     thread = ThreadHandler(threadID, workQueue)
     thread.start()
     threads.append(thread)
@@ -100,7 +109,7 @@ while not workQueue.empty():
 
 # Notify threads it's time to exit
 exitFlag = 1
-
+bar.finish()
 # Wait for all threads to complete
 for t in threads:
     t.join()
