@@ -41,6 +41,7 @@ def openFakespotTab(product):
     options.add_argument("--window-size=1920,1080")
     # options.headless = True
     options.add_argument(f'user-agent={user_agent}')
+    options.add_argument("--headless")
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     driver.get('https://www.fakespot.com/analyzer')
     WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "#url-input-home"))).click()

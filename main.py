@@ -22,6 +22,7 @@ def create_amazon_url():
 
 amazon_URL = create_amazon_url()
 products = []
+links = []
 
 
 def extract_link_and_rating_info(div):
@@ -67,7 +68,7 @@ def process_data(q):
                 products.append(prod)
                 price = price_span.text
                 prod["price"] = float(price[1:])
-                prod["fake_spot"] = fakespot_api.FakeSpot.get_product_info(prod["link"])
+                prod["asin"] = fakespot_api.FakeSpot.get_asin(prod["link"])
             bar.next()
             queueLock.release()
         else:
@@ -109,9 +110,19 @@ while not workQueue.empty():
 
 # Notify threads it's time to exit
 exitFlag = 1
-bar.finish()
 # Wait for all threads to complete
 for t in threads:
     t.join()
+
+fakeSpots = fakespot_api.FakeSpot.get_asins_bulk([item["asin"] for item in products if item["asin"] is not None])
+for index, value in enumerate(products):
+    if value["asin"] in fakeSpots:
+        value["fake_spot"] = fakeSpots[value["asin"]]
+        products[index] = value
+    else:
+        value["fake_spot"] = [
+            "?",
+            None
+        ]
 
 print(json.dumps(products, indent=4, default=str))
