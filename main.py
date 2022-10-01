@@ -1,9 +1,16 @@
+import concurrent.futures
 import json
+import multiprocessing
 import queue
+import re
 import threading
 import time
 import urllib.parse
 
+# noinspection PyUnresolvedReferences
+import cchardet  # https://beautiful-soup-4.readthedocs.io/en/latest/#improving-performance
+# noinspection PyUnresolvedReferences
+import lxml  # https://beautiful-soup-4.readthedocs.io/en/latest/#improving-performance
 from progress.bar import Bar
 
 import common
@@ -25,20 +32,16 @@ products = []
 links = []
 
 
-def extract_link_and_rating_info(div):
-    children = div.findChildren()
+def extract_link_and_rating_info(product_html):
     product = {"rating": {'num_stars': 0.0, 'num_ratings': 0}, "link": ""}
-    for rating_tag in children:
-        if rating_tag.name == 'span' and rating_tag.has_attr('aria-label') and rating_tag['aria-label'].endswith(
-                'out of 5 stars'):
-            num_str = rating_tag['aria-label'][:3]
-            product['rating']['num_stars'] = float(num_str)
-        elif rating_tag.name == 'span' and rating_tag.has_attr('class') and ' '.join(
-                rating_tag['class']) == 'a-size-base s-underline-text':
-            product['rating']['num_ratings'] = int(rating_tag.text.replace(",", ""))
-        elif rating_tag.name == 'a' and rating_tag.has_attr('class') and ' '.join(
-                rating_tag['class']) == 'a-link-normal s-underline-text s-underline-link-text s-link-style':
-            product['link'] = 'https://www.amazon.co.uk' + rating_tag['href']
+    span_rating = product_html.find("span", {"aria-label": re.compile("out of 5 stars$")})
+    if span_rating:
+        product['asin'] = product_html['data-asin']
+        product['rating']['num_stars'] = float(span_rating["aria-label"][:3])
+        product['rating']['num_ratings'] = int(span_rating.find_next_sibling()["aria-label"].replace(",", ""))
+        product['price'] = product_html.find('span', attrs={"class": "a-price"}).find('span').text[1:]
+        product['link'] = 'https://www.amazon.co.uk/dp/{asin}/'.format(asin=product['asin'])
+
     return product
 
 
@@ -59,16 +62,8 @@ def process_data(q):
         queueLock.acquire()
         if not workQueue.empty():
             data = q.get()
-            rating_div = data.find("div", {"class": "a-row a-size-small"})
-            price_span = data.find("span", {"class": "a-offscreen"})
-            if (rating_div is None) or (price_span is None):
-                pass
-            else:
-                prod = extract_link_and_rating_info(rating_div)
-                products.append(prod)
-                price = price_span.text
-                prod["price"] = float(price[1:])
-                prod["asin"] = fakespot_api.FakeSpot.get_asin(prod["link"])
+            prod = extract_link_and_rating_info(data)
+            products.append(prod)
             bar.next()
             queueLock.release()
         else:
@@ -81,7 +76,7 @@ page = common.load_url(amazon_URL)
 print("Calculate page data...")
 soup = common.make_soup(page)
 
-search_results = soup.find_all("div", {"data-asin": True})
+search_results = soup.find_all(attrs={"data-component-type": "s-search-result"})
 
 total_search_results = len(search_results)
 
@@ -89,11 +84,12 @@ queueLock = threading.Lock()
 workQueue = queue.Queue(total_search_results)
 threads = []
 
-print("Processing product information")
+print("Processing {total} product(s) information\n".format(total=total_search_results))
 
 bar = Bar('Processing', max=total_search_results)
+
 # Create new threads
-for threadID in range(total_search_results):
+for threadID in range(multiprocessing.cpu_count()):
     thread = ThreadHandler(threadID, workQueue)
     thread.start()
     threads.append(thread)
@@ -114,15 +110,33 @@ exitFlag = 1
 for t in threads:
     t.join()
 
+print("\nProcessing fake spot data")
+
 fakeSpots = fakespot_api.FakeSpot.get_asins_bulk([item["asin"] for item in products if item["asin"] is not None])
-for index, value in enumerate(products):
-    if value["asin"] in fakeSpots:
-        value["fake_spot"] = fakeSpots[value["asin"]]
-        products[index] = value
-    else:
-        value["fake_spot"] = [
-            "?",
-            None
-        ]
+
+with concurrent.futures.ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+    for index, value in enumerate(products):
+        if value["asin"] in fakeSpots:
+            if len(fakeSpots[value["asin"]]) < 3:
+                [grade, rate] = fakeSpots[value["asin"]]
+                isOutdated = True
+            else:
+                [grade, rate, isOutdated, _] = fakeSpots[value["asin"]]
+
+            if isOutdated:
+                th = executor.submit(fakespot_api.FakeSpot.analyse_product,
+                                     value["link"])
+                [grade, rate] = th.result()
+
+            value["fake_spot"] = [
+                grade,
+                rate
+            ]
+            products[index] = value
+        else:
+            value["fake_spot"] = [
+                "?",
+                None
+            ]
 
 print(json.dumps(products, indent=4, default=str))
