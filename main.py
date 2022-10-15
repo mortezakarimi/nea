@@ -1,3 +1,4 @@
+import argparse
 import concurrent.futures
 import json
 import multiprocessing
@@ -5,6 +6,7 @@ import queue
 import sys
 import threading
 import time
+from decimal import Decimal
 
 # noinspection PyUnresolvedReferences
 import cchardet  # https://beautiful-soup-4.readthedocs.io/en/latest/#improving-performance
@@ -13,6 +15,7 @@ import lxml  # https://beautiful-soup-4.readthedocs.io/en/latest/#improving-perf
 from progress.bar import Bar
 
 import common
+from Camelize import Camelize
 from Database import Database
 from FakeSpot import FakeSpot
 from ThreadHandler import ThreadHandler
@@ -20,8 +23,8 @@ from common import create_amazon_url, extract_link_and_rating_info, confirm
 
 
 class Main:
-    def __init__(self):
-        self.search_term = None
+    def __init__(self, search_term: str = None):
+        self.search_term = search_term
         self.__total_search_results = None
         self.__bar = None
         self.__queueLock = threading.Lock()
@@ -74,6 +77,27 @@ class Main:
                         "?",
                         None
                     ]
+
+    def __process_camelcamelcamel_information(self):
+        print("\nProcessing CamelCamelCamel data")
+        with concurrent.futures.ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+            for index, value in enumerate(self.__products):
+                c = Camelize(value['asin'])
+                camel_result = c.get()
+                if common.keys_exists(camel_result, 'highest_pricing', 'price_amazon', 'price'):
+                    value["highest_price"] = str(Decimal(
+                        camel_result['highest_pricing']['price_amazon']['price']) / Decimal(
+                        100))
+                else:
+                    value["highest_price"] = str(Decimal(0))
+                if common.keys_exists(camel_result, 'lowest_pricing', 'price_amazon', 'price'):
+                    value["lowest_price"] = str(
+                        Decimal(camel_result['lowest_pricing']['price_amazon']['price']) / Decimal(
+                            100))
+                else:
+                    value["lowest_price"] = str(Decimal(0))
+
+                self.__products[index] = value
 
     def __process_product_information(self, search_results):
         self.__workQueue = queue.Queue(self.__total_search_results)
@@ -149,9 +173,11 @@ class Main:
     def print(self):
         print(json.dumps(self.__products, indent=4, default=str))
 
-    def start(self):
+    def start(self, force_fetch: bool = False):
         self.search_term = self.__get_search_term()
-        self.__find_in_database()
+        if not force_fetch:
+            self.__find_in_database()
+
         if len(self.__products) == 0:
             self.__amazon_URL = create_amazon_url(self.search_term)
             print("Loading search page...")
@@ -164,13 +190,22 @@ class Main:
             self.__products = list({v['asin']: v for v in self.__products if v["asin"] is not None}.values())
 
             self.__process_fake_spot_information()
+            self.__process_camelcamelcamel_information()
+
+            if confirm("Do you want to print result?"):
+                self.print()
 
             self.__save_into_database()
 
-        if confirm("Do you want to print result?"):
-            self.print()
-
 
 if __name__ == '__main__':
-    app = Main()
-    app.start()
+    parser = argparse.ArgumentParser(prog='NEA', usage='%(prog)s [options]')
+    parser.add_argument('search_term', nargs='?')
+    parser.add_argument('-f', '--force-fetch',
+                        help='Force application to request your search term from amazon, and skip checking already '
+                             'exist search term in database',
+                        action='store_true')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s 1.0')
+    args = parser.parse_args()
+    app = Main(args.search_term)
+    app.start(args.force_fetch)

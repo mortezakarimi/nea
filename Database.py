@@ -1,5 +1,6 @@
 import os.path
 import sqlite3
+from decimal import Decimal
 from pathlib import Path
 
 
@@ -34,8 +35,8 @@ class Database:
                 amazon_rating_total     real    null ,
                 fake_spot_grade         text    null ,
                 fake_spot_rating        real    null ,
-                highest_price           integer null,
-                lowest_price            integer null
+                highest_price           real null,
+                lowest_price            real null
             );
                 """)
         self.cursor.execute("""
@@ -48,22 +49,45 @@ class Database:
                 )
                 """)
 
-    def save_search_term(self, term: str, rank: int = -1) -> str:
-        self.cursor.execute("INSERT INTO search_term VALUES (?,?,datetime('now'))", [term, rank])
-        return self.cursor.lastrowid
+    def save_search_term(self, term: str, rank: int = -1) -> None:
+        if self.find_search_term(term) is None:
+            self.cursor.execute("INSERT INTO search_term VALUES (?,?,datetime('now'))", [term, rank])
+        else:
+            self.cursor.execute(
+                "UPDATE search_term  SET result_rank = ?, search_date = datetime('now') WHERE keyword = ?",
+                [rank, term])
 
     def save_products(self, term: str, products: []):
         for product in products:
-            self.cursor.execute(
-                """
-                INSERT INTO product (id, title, price, link, amazon_rating_stars, amazon_rating_total, fake_spot_grade, fake_spot_rating, highest_price, lowest_price)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
-                """,
-                [product['asin'], product['title'], product['link'], product['price'], product['rating']['num_stars'],
-                 product['rating']['num_ratings'], product['fake_spot'][0], product['fake_spot'][1],
-                 product['price'], product['price']])
-            self.cursor.execute("INSERT INTO search_term_product (search_keyword, product_id) values (?,?)",
+            self.cursor.execute("SELECT id FROM product WHERE id = ?", [product['asin']])
+            if self.cursor.fetchone() is None:
+                self.cursor.execute(
+                    """
+                    INSERT INTO product (id, title, price, link, amazon_rating_stars, amazon_rating_total, fake_spot_grade, fake_spot_rating, highest_price, lowest_price)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)
+                    """,
+                    [product['asin'], product['title'], product['link'], product['price'],
+                     product['rating']['num_stars'],
+                     product['rating']['num_ratings'], product['fake_spot'][0], product['fake_spot'][1],
+                     product['highest_price'], product['lowest_price']])
+            else:
+                self.cursor.execute(
+                    """
+                    UPDATE product SET title = ?, price=?, link=?, amazon_rating_stars=?, amazon_rating_total=?,
+                     fake_spot_grade=?, fake_spot_rating=?, highest_price=?, lowest_price=?
+                      WHERE id = ?
+                    """,
+                    [product['title'], product['link'], product['price'],
+                     product['rating']['num_stars'],
+                     product['rating']['num_ratings'], product['fake_spot'][0], product['fake_spot'][1],
+                     product['highest_price'], product['lowest_price'], product['asin']])
+
+            # Check if product and term relation not exist add relation
+            self.cursor.execute("SELECT count(*) FROM search_term_product WHERE search_keyword = ? AND product_id = ?",
                                 [term, product['asin']])
+            if self.cursor.fetchone()[0] == 0:
+                self.cursor.execute("INSERT INTO search_term_product (search_keyword, product_id) values (?,?)",
+                                    [term, product['asin']])
 
     def commit(self):
         self.connection.commit()

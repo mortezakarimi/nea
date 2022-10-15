@@ -64,3 +64,24 @@ def confirm(question: str) -> bool:
         print("\n Invalid Option. Please Enter a Valid Option.")
         return confirm(question)
     return c.lower() == 'y'
+
+
+def keys_exists(element, *keys):
+    """
+    Check if *keys (nested) exists in `element` (dict).
+    """
+    if not isinstance(element, dict):
+        raise AttributeError('keys_exists() expects dict as first argument.')
+    if len(keys) == 0:
+        raise AttributeError('keys_exists() expects at least two arguments, one given.')
+
+    _element = element
+    for key in keys:
+        try:
+            if _element is not None:
+                _element = _element[key]
+            else:
+                return False
+        except KeyError:
+            return False
+    return True
