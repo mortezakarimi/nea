@@ -1,5 +1,6 @@
 import re
 import ssl
+import sys
 import urllib.parse
 from urllib.request import urlopen, Request
 
@@ -52,7 +53,11 @@ def extract_link_and_rating_info(product_html: bs4.element.Tag | bs4.element.Nav
     if span_rating:
         product['rating']['num_stars'] = float(span_rating["aria-label"][:3])
         product['rating']['num_ratings'] = int(span_rating.find_next_sibling()["aria-label"].replace(",", ""))
-        product['price'] = product_html.find('span', attrs={"class": "a-price"}).find('span').text[1:]
+        priceContainer = product_html.find('span', attrs={"class": "a-price"})
+        if priceContainer is not None:
+            product['price'] = priceContainer.find('span').text[1:]
+        else:
+            product['price'] = None
         product['link'] = 'https://www.amazon.co.uk/dp/{asin}/'.format(asin=product['asin'])
 
     return product
@@ -85,3 +90,9 @@ def keys_exists(element, *keys):
         except KeyError:
             return False
     return True
+
+
+def print_console(msg):
+    sys.stdout.flush()
+    sys.stderr.flush()
+    print(msg)

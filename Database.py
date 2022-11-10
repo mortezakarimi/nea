@@ -1,6 +1,5 @@
 import os.path
 import sqlite3
-from decimal import Decimal
 from pathlib import Path
 
 
@@ -63,7 +62,7 @@ class Database:
             if self.cursor.fetchone() is None:
                 self.cursor.execute(
                     """
-                    INSERT INTO product (id, title, price, link, amazon_rating_stars, amazon_rating_total, fake_spot_grade, fake_spot_rating, highest_price, lowest_price)
+                    INSERT INTO product (id, title, link, price, amazon_rating_stars, amazon_rating_total, fake_spot_grade, fake_spot_rating, highest_price, lowest_price)
                     VALUES (?,?,?,?,?,?,?,?,?,?)
                     """,
                     [product['asin'], product['title'], product['link'], product['price'],
@@ -73,7 +72,7 @@ class Database:
             else:
                 self.cursor.execute(
                     """
-                    UPDATE product SET title = ?, price=?, link=?, amazon_rating_stars=?, amazon_rating_total=?,
+                    UPDATE product SET title = ?, link=?, price=?, amazon_rating_stars=?, amazon_rating_total=?,
                      fake_spot_grade=?, fake_spot_rating=?, highest_price=?, lowest_price=?
                       WHERE id = ?
                     """,
