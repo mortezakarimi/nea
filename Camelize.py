@@ -40,8 +40,7 @@ class Camelize:
         # Use proxy to bypass rate limit, See https://app.zenrows.com/
         client = ZenRowsClient("9546b9d7e8016593565d1231cb0dbd1de828054b")
 
-        response = client.get(url)
-
+        response = client.get(url, {"premium_proxy": "true"})
         return response.json()
 
     def get(self):

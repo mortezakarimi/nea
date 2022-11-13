@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtSql import QSqlRelationalTableModel, QSqlRelation
+from PyQt6.QtSql import QSqlRelationalTableModel, QSqlRelation, QSqlIndex
 
 
 class SearchTermProductModel(QSqlRelationalTableModel):
@@ -10,3 +10,6 @@ class SearchTermProductModel(QSqlRelationalTableModel):
         self.setRelation(1, QSqlRelation("product", "id", "name"))
         self.setHeaderData(0, Qt.Orientation.Horizontal, "Search Term")
         self.setHeaderData(1, Qt.Orientation.Horizontal, "Product")
+
+    def primaryKey(self):
+        return QSqlIndex(["search_keyword", "product_id"])

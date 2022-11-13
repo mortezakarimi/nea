@@ -139,6 +139,7 @@ class Main:
             if confirm("This search term already exist and saved on \"{0}\", Do you want to reload search from "
                        "database?".format(keyword_result['search_date'])):
                 self._products = db.retrieve_products(self.search_term)
+                self.print()
 
     def _save_into_database(self, force_save=False):
         if force_save or confirm("Do you want save result into database?"):
@@ -176,7 +177,11 @@ class Main:
         common.print_console(json.dumps(self._products, indent=4, default=str))
 
     def start(self, **kwargs):
-        self.search_term = self._get_search_term()
+        while True:
+            self.search_term = self._get_search_term()
+            if self.search_term.strip() != "":
+                break
+
         if not kwargs['force_fetch']:
             self._find_in_database()
 

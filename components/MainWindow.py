@@ -7,7 +7,7 @@
 
 
 from PyQt6 import QtCore, QtGui, QtWidgets
-from PyQt6.QtCore import QSize
+from PyQt6.QtCore import QSize, QMargins
 from PyQt6.QtWidgets import QApplication
 
 from components.QHistory import QHistory
@@ -17,7 +17,7 @@ from components.QSearch import QSearch
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.setFixedSize(QSize(1024, 768))
+        MainWindow.resize(QSize(1024, 768))
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
                                            QtWidgets.QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
@@ -26,19 +26,26 @@ class Ui_MainWindow(object):
         MainWindow.setSizePolicy(sizePolicy)
         MainWindow.setLocale(QtCore.QLocale(QtCore.QLocale.Language.English, QtCore.QLocale.Country.UnitedKingdom))
 
+        MainWindow.setContentsMargins(0, 0, 0, 0)
+
+        self.container = QtWidgets.QHBoxLayout()
+        self.container.setContentsMargins(0, 0, 0, 0)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Maximum)
+
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred,
+                                           QtWidgets.QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.centralwidget.sizePolicy().hasHeightForWidth())
-
+        self.centralwidget.setContentsMargins(0, 0, 0, 0)
         self.centralwidget.setSizePolicy(sizePolicy)
         self.centralwidget.setObjectName("centralwidget")
 
         self.tabWidget = QtWidgets.QTabWidget(self.centralwidget)
-        self.tabWidget.setGeometry(QtCore.QRect(0, 0, 1024, 740))
+        self.tabWidget.setGeometry(MainWindow.geometry())
 
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Maximum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Preferred,
+                                           QtWidgets.QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tabWidget.sizePolicy().hasHeightForWidth())
@@ -46,7 +53,7 @@ class Ui_MainWindow(object):
         self.tabWidget.setSizePolicy(sizePolicy)
         self.tabWidget.setTabPosition(QtWidgets.QTabWidget.TabPosition.South)
         self.tabWidget.setObjectName("tabWidget")
-
+        self.tabWidget.setContentsMargins(0, 0, 0, 0)
         self.search = QSearch(self)
         self.search.setObjectName("search")
         self.tabWidget.addTab(self.search, "")
@@ -70,7 +77,16 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.tabWidget.setCurrentIndex(0)
+
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+        self.margin = QMargins()
+        self.margin.setBottom(20)
+
+    def resizeEvent(self, event: QtGui.QResizeEvent):
+        self.tabWidget.resize(event.size().shrunkBy(self.margin))
+
+    def closeEvent(self, event: QtGui.QCloseEvent):
+        self.search.stop_process()
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate

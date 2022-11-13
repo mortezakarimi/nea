@@ -57,7 +57,7 @@ def extract_link_and_rating_info(product_html: bs4.element.Tag | bs4.element.Nav
         if priceContainer is not None:
             product['price'] = priceContainer.find('span').text[1:]
         else:
-            product['price'] = None
+            product['price'] = 0
         product['link'] = 'https://www.amazon.co.uk/dp/{asin}/'.format(asin=product['asin'])
 
     return product

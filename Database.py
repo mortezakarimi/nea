@@ -10,9 +10,9 @@ class Database:
         if not directory_path.exists():
             directory_path.mkdir(parents=True, exist_ok=True)
 
-        self.connection = sqlite3.connect(path)
-        self.connection.row_factory = sqlite3.Row
-        self.cursor = self.connection.cursor()
+        self.__connection = sqlite3.connect(path)
+        self.__connection.row_factory = sqlite3.Row
+        self.cursor = self.__connection.cursor()
 
     def initialize_tables(self):
         self.cursor.execute("""
@@ -89,7 +89,7 @@ class Database:
                                     [term, product['asin']])
 
     def commit(self):
-        self.connection.commit()
+        self.__connection.commit()
 
     def find_search_term(self, term):
         self.cursor.execute("SELECT * FROM search_term WHERE keyword = ?", [term])

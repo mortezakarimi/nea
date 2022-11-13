@@ -7,6 +7,7 @@
 
 
 from PyQt6 import QtCore, QtWidgets
+from PyQt6.QtCore import QSortFilterProxyModel
 from PyQt6.QtWidgets import QWidget, QHeaderView, QSizePolicy
 
 from Models.ProductModel import ProductModel
@@ -23,11 +24,12 @@ class _Ui_History(object):
         self.container = QtWidgets.QHBoxLayout()
         self.container.setContentsMargins(0, 0, 0, 0)
         History.setLayout(self.container)
-        self.model = ProductModel()
-        self.model.select()
+        model = ProductModel()
+        proxy = QSortFilterProxyModel()
+        proxy.setSourceModel(model)
 
         self.tableView = QtWidgets.QTableView(History)
-        self.tableView.setModel(self.model)
+        self.tableView.setModel(proxy)
         self.tableView.setObjectName("tableView")
         self.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tableView.setContentsMargins(0, 0, 0, 0)
