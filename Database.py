@@ -49,7 +49,7 @@ class Database:
                 """)
 
     def save_search_term(self, term: str, rank: int = -1) -> None:
-        if self.find_search_term(term) is None:
+        if not self.is_exist_search_term(term):
             self.cursor.execute("INSERT INTO search_term VALUES (?,?,datetime('now'))", [term, rank])
         else:
             self.cursor.execute(
@@ -94,6 +94,10 @@ class Database:
     def find_search_term(self, term):
         self.cursor.execute("SELECT * FROM search_term WHERE keyword = ?", [term])
         return self.cursor.fetchone()
+
+    def is_exist_search_term(self, term):
+        self.cursor.execute("SELECT count(*) FROM search_term WHERE keyword = ?", [term])
+        return self.cursor.fetchone()[0] > 0
 
     def retrieve_products(self, term):
         self.cursor.execute(
