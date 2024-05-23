@@ -2,7 +2,7 @@ beautifulsoup4==4.11.1
 cchardet==2.1.7
 certifi==2023.7.22
 lxml==4.9.4
-selenium==4.6.0
+selenium==4.21.0
 webdriver_manager==3.8.4
 
 progress~=1.6
