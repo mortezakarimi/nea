@@ -1,4 +1,4 @@
-beautifulsoup4==4.12.3
+beautifulsoup4==4.13.3
 cchardet==2.1.7
 certifi==2024.7.4
 lxml==5.2.2
